@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.rag.service.StorageService;
-import com.example.rag.utils.RAGTextUtils;
+import com.example.rag.util.RAGTextUtils;
 
 @RestController
 @RequestMapping("/api")

@@ -1,4 +1,4 @@
-package com.example.rag.utils;
+package com.example.rag.util;
 
 import java.util.ArrayList;
 import java.util.List;

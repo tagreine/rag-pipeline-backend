@@ -13,6 +13,7 @@ The project follows a structured approach with the following key components:
   - **service**: Services for processing documents, generating embeddings, and querying.
   - **repository**: Repository interface for interacting with Elasticsearch.
   - **model**: Data models representing documents and query requests.
+  - **util**: Utility methods
 
 - **src/main/resources**: Contains configuration files for the application.
   - **application.yml**: Main configuration settings.
