@@ -47,3 +47,6 @@ jacoco.exec
 *.swp
 *.bak
 *.tmp
+
+# database files
+data
