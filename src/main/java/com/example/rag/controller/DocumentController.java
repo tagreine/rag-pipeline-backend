@@ -1,8 +1,11 @@
 package com.example.rag.controller;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,15 +14,21 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
+import com.example.rag.service.StorageService;
+import com.example.rag.utils.RAGTextUtils;
 
 @RestController
 @RequestMapping("/api")
 public class DocumentController {
+    private final StorageService storageService;
+
+    @Autowired
+    public DocumentController(StorageService storageService) {
+        this.storageService = storageService;
+    }
+
     @GetMapping("/hello")
     public String hello() {
-        System.out.println("Hello from RAG backend!");
         return "Hello from RAG backend!";
     }
 
@@ -30,22 +39,23 @@ public class DocumentController {
             return ResponseEntity.badRequest().body("Please upload a PDF file.");
         }
         try {
-            // Save to a temp directory for now
-            File tempFile = File.createTempFile("upload-", ".pdf");
-            file.transferTo(tempFile);
-            System.out.println("File saved to: " + tempFile.getAbsolutePath());
+        String blobUrl = storageService.uploadPdf(file);
+        if (blobUrl == null || blobUrl.isEmpty()) {
+            return ResponseEntity.internalServerError().body("Failed to upload file.");
+        }
 
-            // Extract text from PDF
-            String extractedText;
-            try (PDDocument document = PDDocument.load(tempFile)) {
-                PDFTextStripper pdfStripper = new PDFTextStripper();
-                extractedText = pdfStripper.getText(document);
-            }
-            System.out.println("Extracted text: " + extractedText.substring(0, Math.min(200, extractedText.length())));
-
-            return ResponseEntity.ok("File uploaded and text extracted. First 200 chars: " +
-                    extractedText.substring(0, Math.min(200, extractedText.length())));
-        } catch (IOException e) {
+        // Download and extract text
+        try (InputStream pdfStream = storageService.downloadPdf(originalFilename);
+             PDDocument document = PDDocument.load(pdfStream)) {
+            PDFTextStripper pdfStripper = new PDFTextStripper();
+            String extractedText = pdfStripper.getText(document);
+            
+            List<String> chunks = RAGTextUtils.chunkText(extractedText, 100);
+            return ResponseEntity.ok("File uploaded. Extracted " + chunks.size() + " chunks. First chunk: " +
+                (chunks.isEmpty() ? "" : chunks.get(0)));
+        }
+        } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to upload or process file.");
         }
+    }
 }
