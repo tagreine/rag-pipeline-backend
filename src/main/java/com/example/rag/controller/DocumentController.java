@@ -11,6 +11,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+
 @RestController
 @RequestMapping("/api")
 public class DocumentController {
@@ -31,9 +34,18 @@ public class DocumentController {
             File tempFile = File.createTempFile("upload-", ".pdf");
             file.transferTo(tempFile);
             System.out.println("File saved to: " + tempFile.getAbsolutePath());
-            return ResponseEntity.ok("File uploaded successfully: " + tempFile.getName());
+
+            // Extract text from PDF
+            String extractedText;
+            try (PDDocument document = PDDocument.load(tempFile)) {
+                PDFTextStripper pdfStripper = new PDFTextStripper();
+                extractedText = pdfStripper.getText(document);
+            }
+            System.out.println("Extracted text: " + extractedText.substring(0, Math.min(200, extractedText.length())));
+
+            return ResponseEntity.ok("File uploaded and text extracted. First 200 chars: " +
+                    extractedText.substring(0, Math.min(200, extractedText.length())));
         } catch (IOException e) {
-            return ResponseEntity.internalServerError().body("Failed to upload file.");
+            return ResponseEntity.internalServerError().body("Failed to upload or process file.");
         }
-    }
 }
