@@ -38,6 +38,7 @@ spring.log
 # Environment files
 .env
 *.env
+.envrc
 
 # Test reports
 surefire-reports/
