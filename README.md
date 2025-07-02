@@ -21,17 +21,62 @@ The project follows a structured approach with the following key components:
 
 - **pom.xml**: Maven configuration file for managing dependencies and build settings.
 
+## Infrastructure (Docker Compose)
+
+This project provides a `docker-compose.yml` for local development infrastructure:
+
+- **Elasticsearch**: Full-text search and vector storage.
+- **Dejavu**: Web UI for browsing and managing Elasticsearch data.
+- **Azurite**: Local emulator for Azure Blob Storage.
+
+### Starting the Infrastructure
+
+1. **Start all services:**
+   ```bash
+   docker-compose up -d
+   ```
+
+2. **Elasticsearch**
+   - Runs on [http://localhost:9200](http://localhost:9200)
+   - No authentication (security disabled for local use)
+
+3. **Dejavu (Elasticsearch UI)**
+   - Access at [http://localhost:1358](http://localhost:1358)
+   - Use this to browse, search, and manage your Elasticsearch indices and documents.
+   - **Connect to Elasticsearch:**  
+     - URL: `http://elasticsearch:9200` (from inside Docker)  
+     - Or: `http://localhost:9200` (from your browser)
+
+4. **Azurite (Azure Blob Storage Emulator)**
+   - Blob service runs on `http://localhost:10000`
+   - Use [Azure Storage Explorer](https://azure.microsoft.com/en-us/products/storage/storage-explorer/) to browse and manage blobs:
+     - Add a new connection in Storage Explorer:
+       - Select "Attach to a local emulator"
+       - Azurite will appear as a local storage account
+
+### Stopping the Infrastructure
+
+```bash
+docker-compose down
+```
+
+### Notes
+
+- Ensure Docker is running before starting the services.
+- Data for Elasticsearch and Azurite is persisted in Docker volumes (`elasticsearch-data`, `azurite-data`).
+
 ## Getting Started
 
 ### Prerequisites
 - Java 11 or higher
 - Maven
-- Elasticsearch instance
+- Docker (for infrastructure)
+- Elasticsearch instance (provided via Docker Compose)
 - Azure OpenAI account
 
 ### Setup Instructions
 1. **Clone the repository**:
-   ```
+   ```bash
    git clone <repository-url>
    cd rag-pipeline-backend
    ```
@@ -40,12 +85,12 @@ The project follows a structured approach with the following key components:
    - Update `src/main/resources/application.yml` with your Elasticsearch and Azure OpenAI configurations.
 
 3. **Build the project**:
-   ```
+   ```bash
    mvn clean install
    ```
 
 4. **Run the application**:
-   ```
+   ```bash
    mvn spring-boot:run
    ```
 
