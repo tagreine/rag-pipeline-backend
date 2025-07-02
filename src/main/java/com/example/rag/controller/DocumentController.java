@@ -2,6 +2,7 @@ package com.example.rag.controller;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.UUID;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -14,6 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.rag.model.ChunkDocument;
+import com.example.rag.repository.ChunkRepository;
+import com.example.rag.service.EmbeddingService;
 import com.example.rag.service.StorageService;
 import com.example.rag.util.RAGTextUtils;
 
@@ -21,10 +25,14 @@ import com.example.rag.util.RAGTextUtils;
 @RequestMapping("/api")
 public class DocumentController {
     private final StorageService storageService;
+    private final EmbeddingService embeddingService;
+    private final ChunkRepository chunkRepository;
 
     @Autowired
-    public DocumentController(StorageService storageService) {
+    public DocumentController(StorageService storageService, EmbeddingService embeddingService, ChunkRepository chunkRepository) {
         this.storageService = storageService;
+        this.embeddingService = embeddingService;
+        this.chunkRepository = chunkRepository;
     }
 
     @GetMapping("/hello")
@@ -39,20 +47,35 @@ public class DocumentController {
             return ResponseEntity.badRequest().body("Please upload a PDF file.");
         }
         try {
-        String blobUrl = storageService.uploadPdf(file);
+        String blobUrl = this.storageService.uploadPdf(file);
         if (blobUrl == null || blobUrl.isEmpty()) {
             return ResponseEntity.internalServerError().body("Failed to upload file.");
         }
 
-        // Download and extract text
-        try (InputStream pdfStream = storageService.downloadPdf(originalFilename);
-             PDDocument document = PDDocument.load(pdfStream)) {
+        try (
+            InputStream pdfStream = this.storageService.downloadPdf(originalFilename);
+            PDDocument document = PDDocument.load(pdfStream);
+            ) {
+            
             PDFTextStripper pdfStripper = new PDFTextStripper();
             String extractedText = pdfStripper.getText(document);
-            
-            List<String> chunks = RAGTextUtils.chunkText(extractedText, 100);
-            return ResponseEntity.ok("File uploaded. Extracted " + chunks.size() + " chunks. First chunk: " +
-                (chunks.isEmpty() ? "" : chunks.get(0)));
+
+            List<String> chunks = RAGTextUtils.chunkText(extractedText, 500);
+            int count = 0;
+            for (String chunk : chunks) {
+                
+                List<Float> embedding = this.embeddingService.embed(chunk);
+                
+                ChunkDocument doc = new ChunkDocument();
+                doc.setId(UUID.randomUUID().toString());
+                doc.setDocumentName(originalFilename);
+                doc.setChunkText(chunk);
+                doc.setEmbedding(embedding);
+
+                this.chunkRepository.save(doc);
+                count++;
+            }
+            return ResponseEntity.ok("File uploaded. Indexed " + count + " chunks.");
         }
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Failed to upload or process file.");
