@@ -5,6 +5,12 @@ azure:
     endpoint: http://127.0.0.1:10000/devstoreaccount1
 
 spring:
-  data:
-    elasticsearch:
-      uris: http://localhost:9200
+  elasticsearch:
+    uris: http://localhost:9200
+  ai:
+    azure:
+      openai:
+        api-key: ${AZURE_OPENAI_KEY}
+        endpoint: ${AZURE_OPENAI_ENDPOINT}
+        embedding:
+          deployment-name: text-embedding-ada-002
