@@ -17,7 +17,7 @@ The project follows a structured approach with the following key components:
 
 - **src/main/resources**: Contains configuration files for the application.
   - **application.yml**: Main configuration settings.
-  - **application-local.yml**: Local-specific configuration settings.
+  - **application-dev.yml**: Local-specific configuration settings.
 
 - **pom.xml**: Maven configuration file for managing dependencies and build settings.
 
@@ -64,6 +64,83 @@ docker-compose down
 
 - Ensure Docker is running before starting the services.
 - Data for Elasticsearch and Azurite is persisted in Docker volumes (`elasticsearch-data`, `azurite-data`).
+
+## Environment Variable Management
+
+This project uses environment variables for sensitive configuration (such as API keys and connection strings) to keep secrets out of version control and make local development easier.
+
+### Recommended Setup for Local Development
+
+1. **Create a `.env` file in the project root**  
+   Add your secrets and environment variables, for example:
+   ```
+   AZURERITE_ACCOUNT_KEY=your_azurite_key
+   AZURE_OPENAI_KEY=your_openai_key
+   AZURE_OPENAI_ENDPOINT=https://YOUR_RESOURCE_NAME.openai.azure.com/
+   AZURE_OPENAI_EMBEDDING_DEPLOYMENT=YOUR_DEPLOYMENT_NAME
+   ```
+
+2. **Create a `.envrc` file in the project root**  
+   Add the following line:
+   ```
+   dotenv
+   ```
+   This tells [direnv](https://direnv.net/) to load variables from `.env` automatically.
+
+3. **Install and enable [direnv](https://direnv.net/):**
+   - Install:  
+     ```bash
+     sudo apt install direnv
+     ```
+   - Hook into your shell by adding to your `~/.bashrc` or `~/.zshrc`:
+     ```bash
+     eval "$(direnv hook bash)"   # or zsh
+     ```
+   - Reload your shell:
+     ```bash
+     source ~/.bashrc
+     # or
+     source ~/.zshrc
+     ```
+   - Allow direnv in your project directory:
+     ```bash
+     direnv allow
+     ```
+
+4. **Verify your environment variables are loaded:**
+   ```bash
+   echo $AZURERITE_ACCOUNT_KEY
+   ```
+
+### Why use this approach?
+
+- **Secrets are not committed to git**: `.env`, `.envrc`, and other secret files are listed in `.gitignore`.
+- **Easy onboarding**: New developers can copy `.env.example` (if provided) and add their own secrets.
+- **Automatic loading**: With direnv, variables are set automatically when you enter the project directory.
+
+### For Production/Deployment
+
+- Use environment variables, Kubernetes Secrets, or a secrets manager (like Azure Key Vault) to provide sensitive configuration at runtime.
+- Never commit real secrets to the repository.
+
+## Configuration
+
+Spring's `@Value` annotation (e.g. `@Value("${azure.storage.account-name}")`) reads values from your configuration files:
+
+- `src/main/resources/application.yml` or `application.properties`
+- Or from environment variables (if referenced with `${VARNAME}`)
+
+For example, in your `application.yml` or `application-dev.yml`:
+```yaml
+azure:
+  storage:
+    account-name: devstoreaccount1
+    account-key: ${AZURERITE_ACCOUNT_KEY}
+    endpoint: http://127.0.0.1:10000/devstoreaccount1
+```
+Spring will inject these values into the beans at runtime.
+
+---
 
 ## Getting Started
 
