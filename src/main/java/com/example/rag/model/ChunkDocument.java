@@ -2,20 +2,11 @@ package com.example.rag.model;
 
 import java.util.List;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.elasticsearch.annotations.Document;
-
-/**
- * Represents a chunk of text extracted from a document, along with its metadata.
- * This class is used to store the text chunks and their embeddings for retrieval and processing.
- */
-@Document(indexName = "chunks")
 public class ChunkDocument {
-    @Id
     private String id;
     private String documentName;
     private String chunkText;
-    private List<Float> embedding;
+    private List<Double> embedding;
 
     public String getId() {
         return id;
@@ -38,10 +29,10 @@ public class ChunkDocument {
         this.chunkText = chunkText;
     }
 
-    public List<Float> getEmbedding() {
+    public List<Double> getEmbedding() {
         return embedding;
     }
-    public void setEmbedding(List<Float> embedding) {
+    public void setEmbedding(List<Double> embedding) {
         this.embedding = embedding;
     }
 }
