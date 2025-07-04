@@ -2,45 +2,39 @@ package com.example.rag.service;
 
 import java.io.InputStream;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
-import com.azure.storage.blob.BlobServiceClientBuilder;
 
 @Service
 public class AzureBlobStorageService implements StorageService {
-    @Value("${azure.storage.account-name}")
-    private String accountName;
 
-    @Value("${azure.storage.account-key}")
-    private String accountKey;
+    private final BlobServiceClient blobServiceClient;
 
-    @Value("${azure.storage.endpoint}")
-    private String endpoint;
+    private final String pdfContainer = "pdfs";
 
-    private final String containerName = "pdfs";
+    public AzureBlobStorageService(BlobServiceClient blobServiceClient) {
+        this.blobServiceClient = blobServiceClient;
+    }
+
+    @Override
+    public boolean blobServiceRunning() {
+        return this.blobServiceClient.getAccountInfo() != null;
+    }
+
+    @Override
+    public BlobClient getBlob(String containerName, String blob) throws Exception {
+        return this.getContainerClient(containerName).getBlobClient(blob);
+    }
 
     @Override
     public String uploadPdf(MultipartFile file) throws Exception {
         String originalFilename = file.getOriginalFilename();
-        String connectionString = String.format(
-            "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=%s;",
-            accountName, accountKey, endpoint
-        );
-        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
-            .connectionString(connectionString)
-            .buildClient();
 
-        BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient(this.containerName);
-        if (!containerClient.exists()) {
-            containerClient.create();
-        }
-
-        BlobClient blobClient = containerClient.getBlobClient(originalFilename);
+        BlobClient blobClient = this.getContainerClient(this.pdfContainer).getBlobClient(originalFilename);
         blobClient.upload(file.getInputStream(), file.getSize(), true);
 
         return blobClient.getBlobUrl();
@@ -48,17 +42,15 @@ public class AzureBlobStorageService implements StorageService {
 
     @Override
     public InputStream downloadPdf(String filename) throws Exception {
-        String connectionString = String.format(
-            "DefaultEndpointsProtocol=http;AccountName=%s;AccountKey=%s;BlobEndpoint=%s;",
-            accountName, accountKey, endpoint
-        );
-        BlobServiceClient blobServiceClient = new BlobServiceClientBuilder()
-            .connectionString(connectionString)
-            .buildClient();
-
-        BlobContainerClient containerClient = blobServiceClient.getBlobContainerClient(this.containerName);
-        BlobClient blobClient = containerClient.getBlobClient(filename);
-
+        BlobClient blobClient = this.getBlob(this.pdfContainer, filename);
         return blobClient.openInputStream();
+    }
+
+    private BlobContainerClient getContainerClient(String containerName) throws Exception {
+        BlobContainerClient containerClient = this.blobServiceClient.getBlobContainerClient(containerName);
+        if (!containerClient.exists()) {
+            containerClient.create();
+        }
+        return containerClient;
     }
 }
